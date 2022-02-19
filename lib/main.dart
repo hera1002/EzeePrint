@@ -43,6 +43,9 @@ class _MyHomePageState extends State<MyHomePage> {
   final TextEditingController _controller = TextEditingController();
   LanScanner scanner = LanScanner(debugLogging: false);
   String deviceIP = "";
+  double Progress=0.0;
+  String scanMessage="";
+
 
 
   @override
@@ -56,19 +59,21 @@ class _MyHomePageState extends State<MyHomePage> {
     String? wifiIP = await info.getWifiIP(); // 192.168.1.43
     String? wifiSubmask = await info.getWifiSubmask(); // 255.255.255.0
     String? wifiGateway = await info.getWifiGatewayIP(); // 192.168.1.1
-    double Progress;
+
     print(wifiIP?.lastIndexOf("."));
     String scanAdr = (wifiIP!.substring(0,wifiIP.lastIndexOf(".")));
      final stream = scanner.icmpScan(scanAdr, progressCallback: (progress) {
     //final stream = scanner.icmpScan('192.168.29', progressCallback: (progress) {
-      Progress = progress;
+       Progress = progress;
+      setState(() {
+        scanMessage=(Progress<1)?"Scanning":"Print Server not found";
+      });
+
     });
     stream.listen((HostModel device) async {
-      print("Host found");
       await TCPScanner(device.ip, [8181, 8182]).scan().then((result) {
         if(result.open.isNotEmpty){
           setState(() {
-            print("Device Found");
             deviceIP =  result.host! ;
           });
         }
@@ -80,6 +85,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
+
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.title),
@@ -97,21 +103,28 @@ class _MyHomePageState extends State<MyHomePage> {
                   padding: const EdgeInsets.all(20.0),
                   child: Column(
                     children: [
-                      LinearProgressIndicator(),
-                      Text("Scanning for Printer"),
+                      Visibility(
+                        visible: (Progress<1),
+                          child: LinearProgressIndicator()),
+                      Text(scanMessage)
                     ],
                   ),
                 ),
               ),
               Visibility(
                   visible: deviceIP.isNotEmpty ? true : false,
-                  child: ElevatedButton(
-                    onPressed: () {
-                      print("pressed");
-                      print(deviceIP);
-                      Navigator.push(context, MaterialPageRoute(builder: (context) => EzeePrint(title: "EzeePrint", deviceIP: deviceIP)));
-                    },
-                    child: Text("connect"),
+                  child: Column(
+                    children: [
+                      Text("PrintServer${deviceIP}"),
+                      ElevatedButton(
+                        onPressed: () {
+                          print("pressed");
+                          print(deviceIP);
+                          Navigator.push(context, MaterialPageRoute(builder: (context) => EzeePrint(title: "EzeePrint", deviceIP: deviceIP)));
+                        },
+                        child: Text("connect"),
+                      ),
+                    ],
                   )
               )
             ],
